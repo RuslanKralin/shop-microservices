@@ -1,0 +1,65 @@
+version: "3.8"
+
+services:
+  app-dev: # Сервис разработки
+    build:
+      context: ../services/user-service
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../services/user-service:/app
+      - /app/node_modules
+    environment: # Переменные окружения
+      - NODE_ENV=docker # чтобы Nest читал .docker.env (".docker.env")
+    depends_on: # Зависимость от сервиса db
+      - db
+      - redis
+    command: yarn start:dev # Команда для запуска приложения в режиме разработки
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-data:/data
+    restart: always
+
+  redis-insight: # не работает через браузер
+    image: redis/redisinsight:latest
+    ports:
+      - "8002:8001"
+    volumes:
+      - redis-insight-data:/db
+    restart: always
+    depends_on:
+      - redis
+
+  db: # Сервис базы данных
+    image: postgres:14-alpine # Используем образ Postgres
+    ports:
+      - "5433:5432" # Порт для доступа к базе данных
+    environment: # Переменные окружения
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=users-service
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Волюм для хранения данных базы данных
+    restart: always
+
+  pgadmin: # Сервис pgadmin
+    image: dpage/pgadmin4
+    ports:
+      - "5050:80"
+    environment: # Переменные окружения
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    depends_on: # Зависимость от сервиса db
+      - db
+    restart: always # Перезапуск сервиса при изменении
+
+volumes: # Волюмы для хранения данных баз данных
+  postgres_data: # сохраняет данные Postgres
+  mongodb_data: # сохраняет данные MongoDB
+  redis-data: # сохраняет данные Redis
+  redis-insight-data: # сохраняет данные RedisInsight
