@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  app-dev: # Сервис разработки
+  app-dev: # Сервис разработки user-service
     build:
       context: ../services/user-service
       dockerfile: Dockerfile.dev
@@ -10,12 +10,33 @@ services:
     volumes:
       - ../services/user-service:/app
       - /app/node_modules
-    environment: # Переменные окружения
-      - NODE_ENV=docker # чтобы Nest читал .docker.env (".docker.env")
+    environment:
+      - NODE_ENV=docker
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=users-service
     depends_on: # Зависимость от сервиса db
       - db
       - redis
     command: yarn start:dev # Команда для запуска приложения в режиме разработки
+
+  product-app-dev: # Сервис разработки product-service
+    build:
+      context: ../services/product-service
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5001:5001"
+    volumes:
+      - ../services/product-service:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=docker # чтобы Nest читал .docker.env
+    depends_on:
+      - product-db
+      - redis
+    command: yarn start:dev
 
   redis:
     image: redis:7-alpine
@@ -35,7 +56,8 @@ services:
     depends_on:
       - redis
 
-  db: # Сервис базы данных
+  db: # Сервис базы данных для user-service
+    container_name: db_user
     image: postgres:14-alpine # Используем образ Postgres
     ports:
       - "5433:5432" # Порт для доступа к базе данных
@@ -44,7 +66,20 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=users-service
     volumes:
-      - postgres_data:/var/lib/postgresql/data # Волюм для хранения данных базы данных
+      - postgres_data:/var/lib/postgresql/data # Волюм для хранения данных базы данных при остановке контейнера
+    restart: always
+
+  product-db: # Сервис базы данных для product-service
+    container_name: db_product
+    image: postgres:14-alpine
+    ports:
+      - "5434:5432" # Порт для доступа к базе данных
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=product-service
+    volumes:
+      - product_postgres_data:/var/lib/postgresql/data
     restart: always
 
   pgadmin: # Сервис pgadmin
@@ -59,7 +94,8 @@ services:
     restart: always # Перезапуск сервиса при изменении
 
 volumes: # Волюмы для хранения данных баз данных
-  postgres_data: # сохраняет данные Postgres
+  postgres_data: # сохраняет данные Postgres для user-service
+  product_postgres_data: # сохраняет данные Postgres для product-service
   mongodb_data: # сохраняет данные MongoDB
   redis-data: # сохраняет данные Redis
   redis-insight-data: # сохраняет данные RedisInsight

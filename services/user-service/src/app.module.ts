@@ -25,6 +25,7 @@ import { AppRedisModule } from './redis/redis.module';
       database: process.env.DB_NAME,
       models: [User, Role, UserRoles], // автоматически загружает все модели в папке models
       autoLoadModels: true, // автоматически загружает все модели в папке models
+      synchronize: true, // автоматически создаёт таблицы (только для разработки!)
     }),
     UsersModule,
     RolesModule,
