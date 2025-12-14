@@ -51,6 +51,23 @@ services:
       - order-db
       - redis
     command: yarn start:dev
+
+  cart-app-dev: # Сервис разработки order-service
+    build:
+      context: ../services/cart-service
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5003:5003"
+    volumes:
+      - ../services/cart-service:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=docker # чтобы Nest читал .docker.env
+    depends_on:
+      - cart-db
+      - redis
+    command: yarn start:dev
+
   redis:
     image: redis:7-alpine
     ports:
@@ -107,6 +124,18 @@ services:
     volumes:
       - order_postgres_data:/var/lib/postgresql/data
     restart: always
+  cart-db: # Сервис базы данных для cart-service
+    container_name: db_cart
+    image: postgres:14-alpine
+    ports:
+      - "5436:5432" # Порт для доступа к базе данных
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=cart-service
+    volumes:
+      - cart_postgres_data:/var/lib/postgresql/data
+    restart: always
 
   pgadmin: # Сервис pgadmin
     image: dpage/pgadmin4
@@ -123,6 +152,7 @@ volumes: # Волюмы для хранения данных баз данных
   postgres_data: # сохраняет данные Postgres для user-service
   product_postgres_data: # сохраняет данные Postgres для product-service
   order_postgres_data: # сохраняет данные Postgres для order-service
+  cart_postgres_data: # сохраняет данные Postgres для cart-service
   mongodb_data: # сохраняет данные MongoDB
   redis-data: # сохраняет данные Redis
   redis-insight-data: # сохраняет данные RedisInsight
