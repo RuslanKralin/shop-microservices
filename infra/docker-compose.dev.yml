@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   app-dev: # Сервис разработки user-service
     build:
@@ -38,6 +36,21 @@ services:
       - redis
     command: yarn start:dev
 
+  order-app-dev: # Сервис разработки order-service
+    build:
+      context: ../services/order-service
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5002:5002"
+    volumes:
+      - ../services/order-service:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=docker # чтобы Nest читал .docker.env
+    depends_on:
+      - order-db
+      - redis
+    command: yarn start:dev
   redis:
     image: redis:7-alpine
     ports:
@@ -82,6 +95,19 @@ services:
       - product_postgres_data:/var/lib/postgresql/data
     restart: always
 
+  order-db: # Сервис базы данных для order-service
+    container_name: db_order
+    image: postgres:14-alpine
+    ports:
+      - "5435:5432" # Порт для доступа к базе данных
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=order-service
+    volumes:
+      - order_postgres_data:/var/lib/postgresql/data
+    restart: always
+
   pgadmin: # Сервис pgadmin
     image: dpage/pgadmin4
     ports:
@@ -96,6 +122,7 @@ services:
 volumes: # Волюмы для хранения данных баз данных
   postgres_data: # сохраняет данные Postgres для user-service
   product_postgres_data: # сохраняет данные Postgres для product-service
+  order_postgres_data: # сохраняет данные Postgres для order-service
   mongodb_data: # сохраняет данные MongoDB
   redis-data: # сохраняет данные Redis
   redis-insight-data: # сохраняет данные RedisInsight
