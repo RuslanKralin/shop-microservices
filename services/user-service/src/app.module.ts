@@ -8,6 +8,7 @@ import { Role } from './roles/roles.model';
 import { UserRoles } from './roles/user-roles.model';
 import { AuthModule } from './auth/auth.module';
 import { AppRedisModule } from './redis/redis.module';
+import { KafkaModule } from './kafka/kafka.module';
 
 @Module({
   imports: [
@@ -30,10 +31,8 @@ import { AppRedisModule } from './redis/redis.module';
     UsersModule,
     RolesModule,
     AuthModule,
-
-    // PostsModule,
+    KafkaModule,
   ],
-  // controllers: [PostsController],
   providers: [], // тут то что содержит какую то логику и используется в компонентах
   exports: [], // то что мы хотим использовать в других компонентах
   controllers: [], // то что мы хотим использовать в других компонентах

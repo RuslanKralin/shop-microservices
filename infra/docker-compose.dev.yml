@@ -15,10 +15,14 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=users-service
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_CLIENT_ID=user-service
+      - KAFKA_GROUP_ID=user-service
     depends_on: # Зависимость от сервиса db
       - db
       - redis
-    command: yarn start:dev # Команда для запуска приложения в режиме разработки
+      - kafka
+    command: sh -c "npm install && npm run start:dev" # Команда для запуска приложения в режиме разработки
 
   product-app-dev: # Сервис разработки product-service
     build:
@@ -34,7 +38,8 @@ services:
     depends_on:
       - product-db
       - redis
-    command: yarn start:dev
+      - kafka
+    command: sh -c "npm install && npm run start:dev"
 
   order-app-dev: # Сервис разработки order-service
     build:
@@ -50,7 +55,8 @@ services:
     depends_on:
       - order-db
       - redis
-    command: yarn start:dev
+      - kafka
+    command: sh -c "npm install && npm run start:dev"
 
   cart-app-dev: # Сервис разработки order-service
     build:
@@ -63,10 +69,47 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=docker # чтобы Nest читал .docker.env
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_CLIENT_ID=cart-service
+      - KAFKA_GROUP_ID=cart-service
     depends_on:
       - cart-db
       - redis
-    command: yarn start:dev
+      - kafka
+    command: sh -c "npm install && npm run start:dev"
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+    ports:
+      - "2181:2181"
+    restart: always
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    depends_on:
+      - zookeeper
+    ports:
+      # 9092 - для контейнеров внутри docker network (kafka:9092)
+      # 9094 - для приложений, запущенных на хост-машине (localhost:9094)
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+      # Два listener'а:
+      # - PLAINTEXT слушает внутри docker network
+      # - PLAINTEXT_HOST нужен для подключений с твоего ПК
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:9094
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+    restart: always
 
   redis:
     image: redis:7-alpine

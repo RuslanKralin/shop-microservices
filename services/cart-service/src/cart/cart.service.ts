@@ -54,6 +54,13 @@ export class CartService {
     return this.cartRepository.save(cart);
   }
 
+  // ensureCart — идемпотентный метод: можно вызывать сколько угодно раз.
+  // Удобен для Kafka-событий (потому что Kafka гарантирует доставку "как минимум один раз",
+  // то есть событие может прийти повторно).
+  async ensureCart(userId: number): Promise<CartEntity> {
+    return this.findOrCreateCart(userId);
+  }
+
   async getCart(userId: number): Promise<CartEntity> {
     const cart = await this.findOrCreateCart(userId);
     return this.cartRepository.findOneOrFail({

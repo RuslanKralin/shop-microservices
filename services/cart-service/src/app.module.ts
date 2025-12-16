@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { CartModule } from './cart/cart.module';
+import { KafkaModule } from './kafka/kafka.module';
 import { AppService } from './app.service';
 
 @Module({
@@ -27,6 +28,7 @@ import { AppService } from './app.service';
       }),
     }),
     CartModule,
+    KafkaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
