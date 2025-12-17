@@ -58,7 +58,10 @@ export class CartService {
   // Удобен для Kafka-событий (потому что Kafka гарантирует доставку "как минимум один раз",
   // то есть событие может прийти повторно).
   async ensureCart(userId: number): Promise<CartEntity> {
-    return this.findOrCreateCart(userId);
+    console.log('🔍 [CartService] Проверяю корзину для userId:', userId);
+    const cart = await this.findOrCreateCart(userId);
+    console.log('✅ [CartService] Корзина готова:', { id: cart.id, userId: cart.userId });
+    return cart;
   }
 
   async getCart(userId: number): Promise<CartEntity> {

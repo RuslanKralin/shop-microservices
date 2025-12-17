@@ -37,9 +37,12 @@ async function bootstrap() {
     },
   });
 
+  console.log('🔌 [CART-SERVICE] Запускаю Kafka consumer...');
   await app.startAllMicroservices();
+  console.log('✅ [CART-SERVICE] Kafka consumer запущен и слушает топик "users.events"');
+  
   await app.listen(PORT, () =>
-    console.log(`Server CART started on port ${PORT}`),
+    console.log(`🚀 [CART-SERVICE] HTTP сервер запущен на порту ${PORT}`),
   );
 }
 // eslint-disable-next-line @typescript-eslint/no-floating-promises

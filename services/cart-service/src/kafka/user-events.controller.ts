@@ -52,25 +52,40 @@ export class UserEventsController {
   // этот метод будет вызван автоматически.
   @EventPattern('users.events')
   async handleUserEvents(@Payload() message: unknown) {
+    console.log('📥 [CART-SERVICE] Получено сообщение из Kafka:', message);
+    
     // В Kafka сообщения могут приходить в разных формах.
     // Если producer отправляет { key, value }, то полезные данные будут в value.
     // Если producer отправляет просто объект, то он может быть прямо в message.
     const rawValue =
       isRecord(message) && 'value' in message ? message.value : message;
     const payload = parseKafkaValue(rawValue);
+    
+    console.log('🔍 [CART-SERVICE] Распарсенный payload:', payload);
 
     if (!isRecord(payload) || payload.type !== 'UserCreated') {
       // В этом топике могут жить и другие типы событий.
       // Пока обрабатываем только UserCreated.
+      console.log('⚠️ [CART-SERVICE] Событие проигнорировано (не UserCreated):', payload);
       return;
     }
+    
+    console.log('✅ [CART-SERVICE] Обрабатываю событие UserCreated');
 
     // userId — внешний идентификатор пользователя (reference id) из user-service.
     const event = payload as unknown as UserCreatedEvent;
     const userId = Number(event.userId);
-    if (!userId) return;
+    
+    console.log('👤 [CART-SERVICE] userId из события:', userId);
+    
+    if (!userId) {
+      console.log('❌ [CART-SERVICE] userId невалидный, пропускаю');
+      return;
+    }
 
     // Идемпотентная операция: если корзина уже есть — просто вернёт существующую.
-    await this.cartService.ensureCart(userId);
+    console.log('🛒 [CART-SERVICE] Создаю корзину для userId:', userId);
+    const cart = await this.cartService.ensureCart(userId);
+    console.log('✅ [CART-SERVICE] Корзина создана/получена:', cart);
   }
 }

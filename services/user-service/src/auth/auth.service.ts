@@ -11,7 +11,7 @@ import { UsersService } from 'src/users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { User } from 'src/users/user.model';
 import * as bcrypt from 'bcryptjs';
-import crypto from 'crypto';
+import { randomUUID } from 'crypto';
 import { ClientKafka } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
 import {
@@ -33,7 +33,13 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
   // NestJS Kafka client надо явно подключить.
   // Иначе emit() может не отправить сообщение (особенно при первом вызове).
   async onModuleInit() {
-    await this.kafkaClient.connect();
+    console.log('🔌 [USER-SERVICE] Подключаюсь к Kafka...');
+    try {
+      await this.kafkaClient.connect();
+      console.log('✅ [USER-SERVICE] Успешно подключен к Kafka');
+    } catch (error) {
+      console.error('❌ [USER-SERVICE] Ошибка подключения к Kafka:', error);
+    }
   }
 
   async onModuleDestroy() {
@@ -140,16 +146,23 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
         const event = {
           type: 'UserCreated',
           userId: user.id,
-          eventId: crypto.randomUUID(),
+          eventId: randomUUID(),
           occurredAt: new Date().toISOString(),
         };
+
+        console.log('📤 [USER-SERVICE] Отправляю событие в Kafka:', {
+          topic: USERS_EVENTS_TOPIC,
+          event,
+        });
 
         // emit(topic, payload) — publish в Kafka.
         // Подписчик (cart-service) слушает 'users.events' и создаёт пустую корзину.
         this.kafkaClient.emit(USERS_EVENTS_TOPIC, event);
+
+        console.log('✅ [USER-SERVICE] Событие отправлено в Kafka');
       } catch (e) {
         // eslint-disable-next-line no-console
-        console.error('Kafka emit UserCreated failed:', e);
+        console.error('❌ [USER-SERVICE] Ошибка отправки в Kafka:', e);
       }
 
       return this.generateToken(user);
