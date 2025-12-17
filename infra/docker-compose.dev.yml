@@ -15,6 +15,10 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=users-service
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=321321
+      - PRIVAT_KEY=secret_key_safasf
       - KAFKA_BROKERS=kafka:9092
       - KAFKA_CLIENT_ID=user-service
       - KAFKA_GROUP_ID=user-service
@@ -22,7 +26,7 @@ services:
       - db
       - redis
       - kafka
-    command: sh -c "npm install && npm run start:dev" # Команда для запуска приложения в режиме разработки
+    command: sh -c "npm install && npx cross-env NODE_ENV=docker nest start --watch" # Команда для запуска приложения в режиме разработки
 
   product-app-dev: # Сервис разработки product-service
     build:
@@ -39,7 +43,7 @@ services:
       - product-db
       - redis
       - kafka
-    command: sh -c "npm install && npm run start:dev"
+    command: sh -c "npm install && npx cross-env NODE_ENV=docker nest start --watch"
 
   order-app-dev: # Сервис разработки order-service
     build:
