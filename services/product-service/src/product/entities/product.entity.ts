@@ -17,6 +17,9 @@ export class ProductEntity {
   @Column()
   price: number;
 
+  @Column({ default: 0 })
+  stock: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

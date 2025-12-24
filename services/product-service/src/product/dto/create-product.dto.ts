@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { IsNotEmpty, IsNumber, IsString, MinLength } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, MinLength, IsOptional, Min } from 'class-validator';
 
 export class CreateProductDto {
   @IsString()
@@ -10,4 +10,9 @@ export class CreateProductDto {
   @IsNumber()
   @IsNotEmpty()
   price: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  stock?: number;
 }

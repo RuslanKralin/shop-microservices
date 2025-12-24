@@ -3,6 +3,7 @@ docker ps -a --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}"
 
 логи контейнера
 docker logs infra-gateway-app-dev-1
+docker logs infra-product-app-dev-1
 docker logs --tail=50 infra-gateway-app-dev-1
 
 пересобрать контейнер
