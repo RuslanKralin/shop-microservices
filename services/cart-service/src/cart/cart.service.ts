@@ -9,6 +9,7 @@ import { CartEntity } from './entities/cart.entity';
 import { CartItemEntity } from './entities/cart-item.entity';
 import { CreateCartDto } from './dto/create-cart.dto';
 import { UpdateCartDto } from './dto/update-cart.dto';
+import { ProductClientService } from '../grpc/product-client.service';
 
 @Injectable()
 export class CartService {
@@ -17,6 +18,7 @@ export class CartService {
     private readonly cartRepository: Repository<CartEntity>,
     @InjectRepository(CartItemEntity)
     private readonly cartItemRepository: Repository<CartItemEntity>,
+    private readonly productClient: ProductClientService, // Внедряем gRPC клиент
   ) {}
 
   create(createCartDto: CreateCartDto) {
@@ -81,6 +83,27 @@ export class CartService {
       throw new BadRequestException('quantity must be >= 1');
     }
 
+    // ✅ ШАГ 1: Проверяем наличие товара через gRPC
+    console.log(
+      `🔍 [CartService] Проверяю товар productId=${productId}, quantity=${quantity}`,
+    );
+    const availability = await this.productClient.checkAvailability(
+      productId,
+      quantity,
+    );
+
+    // ✅ ШАГ 2: Если товара нет в наличии - выбрасываем ошибку
+    if (!availability.available) {
+      throw new BadRequestException(
+        availability.message || 'Товар недоступен для заказа',
+      );
+    }
+
+    console.log(
+      `✅ [CartService] Товар доступен: ${availability.message}, цена: ${availability.price}`,
+    );
+
+    // ✅ ШАГ 3: Добавляем товар в корзину
     const cart = await this.findOrCreateCart(userId);
 
     const existingItem = await this.cartItemRepository.findOne({
@@ -88,9 +111,11 @@ export class CartService {
     });
 
     if (existingItem) {
+      // Если товар уже есть в корзине - увеличиваем количество
       existingItem.quantity += quantity;
       await this.cartItemRepository.save(existingItem);
     } else {
+      // Если товара нет - создаем новую запись
       const item = this.cartItemRepository.create({
         cartId: cart.id,
         productId,

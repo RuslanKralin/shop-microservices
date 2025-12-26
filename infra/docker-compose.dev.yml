@@ -1,5 +1,6 @@
 services:
   gateway-app-dev: # Сервис разработки gateway-service
+    container_name: gateway-app-dev
     build:
       context: ../services/gateway
       dockerfile: Dockerfile.dev
@@ -24,6 +25,7 @@ services:
       - cart-app-dev
     command: sh -c "npm install && npx cross-env NODE_ENV=docker nest start --watch"
   app-dev: # Сервис разработки user-service
+    container_name: app-dev
     build:
       context: ../services/user-service
       dockerfile: Dockerfile.dev
@@ -53,16 +55,23 @@ services:
     command: sh -c "npm install && npx cross-env NODE_ENV=docker nest start --watch" # Команда для запуска приложения в режиме разработки
 
   product-app-dev: # Сервис разработки product-service
+    container_name: product-app-dev
     build:
       context: ../services/product-service
       dockerfile: Dockerfile.dev
     ports:
       - '5001:5001'
+      - '50051:50051' # gRPC порт
     volumes:
       - ../services/product-service:/app
       - /app/node_modules
     environment:
-      - NODE_ENV=docker # чтобы Nest читал .docker.env
+      - PORT=5001
+      - DB_HOST=product-db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=product-service
     depends_on:
       - product-db
       - redis
@@ -70,6 +79,7 @@ services:
     command: sh -c "npm install && npx cross-env NODE_ENV=docker nest start --watch"
 
   order-app-dev: # Сервис разработки order-service
+    container_name: order-app-dev
     build:
       context: ../services/order-service
       dockerfile: Dockerfile.dev
@@ -79,14 +89,20 @@ services:
       - ../services/order-service:/app
       - /app/node_modules
     environment:
-      - NODE_ENV=docker # чтобы Nest читал .docker.env
+      - PORT=5002
+      - DB_HOST=order-db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=order-service
     depends_on:
       - order-db
       - redis
       - kafka
-    command: sh -c "npm install && npm run start:dev"
+    command: sh -c "npm install && npx cross-env NODE_ENV=docker nest start --watch"
 
   cart-app-dev: # Сервис разработки order-service
+    container_name: cart-app-dev
     build:
       context: ../services/cart-service
       dockerfile: Dockerfile.dev
@@ -96,7 +112,14 @@ services:
       - ../services/cart-service:/app
       - /app/node_modules
     environment:
-      - NODE_ENV=docker # чтобы Nest читал .docker.env
+      - NODE_ENV=docker
+      - PORT=5003
+      - DB_HOST=cart-db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=cart-service
+      - PRODUCT_SERVICE_GRPC_URL=product-app-dev:50051
       - KAFKA_BROKERS=kafka:9092
       - KAFKA_CLIENT_ID=cart-service
       - KAFKA_GROUP_ID=cart-service
@@ -104,7 +127,8 @@ services:
       - cart-db
       - redis
       - kafka
-    command: sh -c "npm install && npm run start:dev"
+      - product-app-dev # Важно: зависимость от Product Service
+    command: sh -c "npm install && npx cross-env NODE_ENV=docker nest start --watch"
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.1
@@ -224,7 +248,6 @@ volumes: # Волюмы для хранения данных баз данных
   product_postgres_data: # сохраняет данные Postgres для product-service
   order_postgres_data: # сохраняет данные Postgres для order-service
   cart_postgres_data: # сохраняет данные Postgres для cart-service
-  mongodb_data: # сохраняет данные MongoDB
   redis-data: # сохраняет данные Redis
   redis-insight-data: # сохраняет данные RedisInsight
 

@@ -1,18 +1,15 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-import { IsNotEmpty, IsNumber, IsString, MinLength, IsOptional, Min } from 'class-validator';
+import { IsString, IsNumber, Min, MinLength } from 'class-validator';
 
 export class CreateProductDto {
   @IsString()
-  @MinLength(3)
-  @IsNotEmpty()
+  @MinLength(3, { message: 'Название должно быть не короче 3 символов' })
   name: string;
 
   @IsNumber()
-  @IsNotEmpty()
+  @Min(0.01, { message: 'Цена должна быть больше 0' })
   price: number;
 
   @IsNumber()
-  @IsOptional()
-  @Min(0)
-  stock?: number;
+  @Min(0, { message: 'Количество не может быть отрицательным' })
+  stock: number;
 }

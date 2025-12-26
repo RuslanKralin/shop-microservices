@@ -29,14 +29,17 @@ export class ProxyService {
   }
 
   async forward(req: Request, res: Response, serviceName: string) {
-    const serviceUrl = this.serviceUrls[serviceName];
+    // 1. Находим URL микросервиса по имени
+    const serviceUrl = this.serviceUrls[serviceName]; // например, 'http://localhost:5001'
 
+    // 2. Если микросервис не найден - ошибка
     if (!serviceUrl) {
       console.error(`❌ [PROXY] Сервис не найден: ${serviceName}`);
       throw new HttpException('Service not found', 500);
     }
 
-    // Формируем URL для микросервиса
+    // 3. Формируем полный URL для запроса
+    // Например: "http://localhost:5001/api/products/123"
     const targetUrl = `${serviceUrl}${req.url}`;
 
     console.log(`🔀 [PROXY] ${req.method} ${req.url} → ${targetUrl}`);

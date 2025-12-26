@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { ProductEntity } from './entities/product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { BadRequestException } from 'src/common/exceptions/bad-request.exception';
 
 @Injectable()
 export class ProductService {
@@ -16,9 +17,20 @@ export class ProductService {
     return this.productRepository.find();
   }
 
-  async create(productDto: CreateProductDto): Promise<ProductEntity> {
-    const product = this.productRepository.create(productDto);
-    return this.productRepository.save(product);
+  async create(createProductDto: CreateProductDto) {
+    try {
+      return await this.productRepository.save(createProductDto);
+    } catch (error) {
+      if (error.code === '23505') {
+        // Ошибка уникальности
+        throw new BadRequestException('Товар с таким именем уже существует');
+      }
+      if (error.code === '22P02') {
+        // Ошибка приведения типов
+        throw new BadRequestException('Неверный формат данных');
+      }
+      throw error;
+    }
   }
 
   async update(
