@@ -4,6 +4,9 @@ docker compose -f docker-compose.dev.yml up -d
 Остановка
 docker compose -f docker-compose.dev.yml down
 
+Пересобрать контейнеры
+docker-compose -f docker-compose.dev.yml build --no-cache
+
 1. После внедрения kafka переходить к миграциям
    synchronize: true в TypeORM — для dev ок, но при подключении Kafka и усложнении системы лучше переходить к миграциям (иначе можно словить неожиданные изменения схемы).
    userId приходит из body — это норм временно, но когда подключишь Gateway/Auth, лучше брать userId из токена/контекста.

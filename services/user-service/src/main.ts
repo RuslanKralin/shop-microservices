@@ -3,21 +3,26 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function start() {
   const PORT = process.env.PORT || 5000;
 
   const app = await NestFactory.create(AppModule);
-  
+
+  app.useGlobalFilters(new HttpExceptionFilter());
+
   // Increase the request size limit to 50MB
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
-  
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    transform: true,
-    forbidNonWhitelisted: true,
-  }));
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
 
   app.setGlobalPrefix('api');
 

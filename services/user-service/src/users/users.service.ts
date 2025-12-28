@@ -8,6 +8,7 @@ import { AddRoleDto } from './dto/add-role.dto';
 import { BanUserDto } from './dto/ban-user.dto';
 import { RedisService } from 'src/redis/redis.service';
 import * as bcrypt from 'bcryptjs';
+import { BadRequestException } from '@nestjs/common';
 
 @Injectable()
 export class UsersService {
@@ -18,12 +19,12 @@ export class UsersService {
   ) {}
 
   async createUser(dto: CreateUserDto) {
-    // Берем первую роль из массива или используем USER по умолчанию
-    const roleValue = dto.roles && dto.roles.length > 0 ? dto.roles[0] : 'USER';
+    // Всегда создаём пользователя с ролью User при регистрации
+    const roleValue = 'User';
 
     const role = await this.rolesService.getRoleByValue(roleValue);
     if (!role) {
-      throw new Error(`Роль ${roleValue} не найдена`);
+      throw new BadRequestException(`Роль ${roleValue} не найдена`);
     }
 
     const candidate = await User.findOne({
@@ -32,7 +33,9 @@ export class UsersService {
 
     if (candidate) {
       console.log('Пользователь с таким email уже существует:', dto.email);
-      throw new Error('Пользователь с таким email уже существует');
+      throw new BadRequestException(
+        'Пользователь с таким email уже существует',
+      );
     }
 
     // Хэшируем пароль перед сохранением пользователя
@@ -58,7 +61,7 @@ export class UsersService {
     });
 
     if (!userWithRoles) {
-      throw new Error('Ошибка при создании пользователя');
+      throw new BadRequestException('Ошибка при создании пользователя');
     }
 
     // Получаем чистый объект с ролями
@@ -116,11 +119,11 @@ export class UsersService {
   async addRole(dto: AddRoleDto) {
     const user = await this.userRepo.findByPk(dto.userId);
     if (!user) {
-      throw new Error('Пользователь не найден');
+      throw new BadRequestException('Пользователь не найден');
     }
     const role = await this.rolesService.getRoleByValue(dto.value);
     if (!role) {
-      throw new HttpException('Роль не найдена', HttpStatus.NOT_FOUND);
+      throw new BadRequestException('Роль не найдена');
     }
     await user.$add('role', role.id);
     return user;
@@ -129,7 +132,7 @@ export class UsersService {
   async ban(dto: BanUserDto) {
     const user = await this.userRepo.findByPk(dto.userId);
     if (!user) {
-      throw new Error('Пользователь не найден');
+      throw new BadRequestException('Пользователь не найден');
     }
     user.banned = true;
     user.banReason = dto.reason;
