@@ -67,6 +67,9 @@ export class UsersService {
     // Получаем чистый объект с ролями
     const result = userWithRoles.get({ plain: true });
 
+    // Очищаем кэш пользователей при создании нового
+    await this.redisService.del('users');
+
     return result;
   }
 
@@ -126,6 +129,10 @@ export class UsersService {
       throw new BadRequestException('Роль не найдена');
     }
     await user.$add('role', role.id);
+
+    // Очищаем кэш пользователей при изменении ролей
+    await this.redisService.del('users');
+
     return user;
   }
 
@@ -137,13 +144,10 @@ export class UsersService {
     user.banned = true;
     user.banReason = dto.reason;
     await user.save();
-    await user.reload();
-    console.log('✅ Пользователь забанен:', {
-      id: user.id,
-      email: user.email,
-      banned: user.banned,
-      banReason: user.banReason,
-    });
+
+    // Очищаем кэш пользователей при бане
+    await this.redisService.del('users');
+
     return user;
   }
 }

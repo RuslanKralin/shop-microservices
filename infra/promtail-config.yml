@@ -1,0 +1,127 @@
+# ============================================
+# КОНФИГУРАЦИЯ PROMTAIL
+# ============================================
+# Promtail читает логи из Docker контейнеров и отправляет их в Loki
+
+# Настройки HTTP сервера Promtail
+server:
+  http_listen_port: 9080 # Порт для метрик и health checks
+  grpc_listen_port: 0 # Отключаем gRPC
+
+# Файл для хранения позиций чтения логов
+# Promtail запоминает, до какой строки прочитал каждый файл
+# Это позволяет не читать логи заново после перезапуска
+positions:
+  filename: /tmp/positions.yaml
+
+# Куда отправлять логи
+clients:
+  - url: http://loki:3100/loki/api/v1/push # URL Loki API
+
+# ============================================
+# SCRAPE CONFIGS - Откуда собирать логи
+# ============================================
+scrape_configs:
+  # Конфигурация для сбора логов из Docker контейнеров
+  - job_name: docker
+
+    # Service Discovery - автоматическое обнаружение контейнеров
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock # Подключаемся к Docker socket
+        refresh_interval: 5s # Проверять новые контейнеры каждые 5 секунд
+        filters:
+          # Опционально: можно фильтровать контейнеры по labels
+          # - name: label
+          #   values: ["logging=true"]
+
+    # ============================================
+    # RELABEL CONFIGS - Создание меток для логов
+    # ============================================
+    # Метки (labels) - это то, по чему вы будете искать логи в Grafana
+    # Например: {service="user-service", container="app-dev"}
+    relabel_configs:
+      # 1. Имя контейнера (убираем слэш в начале)
+      - source_labels: ["__meta_docker_container_name"]
+        regex: "/(.*)" # Regex для удаления слэша
+        target_label: "container" # Сохраняем в метку 'container'
+
+      # 2. Имя сервиса из docker-compose
+      # Это самая важная метка для поиска логов конкретного микросервиса
+      - source_labels:
+          ["__meta_docker_container_label_com_docker_compose_service"]
+        target_label: "service"
+
+      # 3. Имя проекта из docker-compose
+      - source_labels:
+          ["__meta_docker_container_label_com_docker_compose_project"]
+        target_label: "project"
+
+      # 4. ID контейнера (для отладки)
+      - source_labels: ["__meta_docker_container_id"]
+        target_label: "container_id"
+
+      # 5. Имя образа Docker
+      - source_labels: ["__meta_docker_container_image"]
+        target_label: "image"
+
+      # 6. Статус контейнера (running, stopped, etc.)
+      - source_labels:
+          ["__meta_docker_container_label_com_docker_compose_container_number"]
+        target_label: "container_number"
+
+      # ============================================
+      # ФИЛЬТРАЦИЯ (опционально)
+      # ============================================
+      # Раскомментируйте, если хотите собирать логи только от ваших микросервисов
+      # Это уменьшит объем логов и ускорит поиск
+
+      # Вариант 1: Фильтр по имени сервиса
+      # - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+      #   regex: '(gateway-app-dev|app-dev|product-app-dev|order-app-dev|cart-app-dev)'
+      #   action: keep  # Оставить только эти сервисы
+
+      # Вариант 2: Исключить системные контейнеры
+      # - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+      #   regex: '(loki|promtail|grafana|redis|postgres|kafka|zookeeper)'
+      #   action: drop  # Исключить эти сервисы
+
+    # ============================================
+    # PIPELINE STAGES - Обработка логов
+    # ============================================
+    # Здесь можно парсить JSON логи, извлекать поля, фильтровать и т.д.
+    pipeline_stages:
+      # 1. Парсинг JSON логов (если ваши логи в JSON формате)
+      - json:
+          expressions:
+            level: level # Извлекаем поле 'level' из JSON
+            message: message # Извлекаем поле 'message' из JSON
+            timestamp: timestamp # Извлекаем поле 'timestamp' из JSON
+            service: service # Извлекаем поле 'service' из JSON
+            traceId: traceId # Извлекаем поле 'traceId' из JSON (если есть)
+
+      # 2. Добавляем извлеченные поля как метки (опционально)
+      # Внимание: не добавляйте слишком много меток с высокой кардинальностью!
+      # Например, не добавляйте userId или traceId как метку
+      - labels:
+          level: # Добавляем level как метку для фильтрации
+          service: # Добавляем service как метку (если есть в JSON)
+
+      # 3. Парсинг timestamp из JSON (если есть)
+      - timestamp:
+          source: timestamp
+          format: RFC3339 # Формат: 2006-01-02T15:04:05Z07:00
+
+
+      # 4. Фильтрация по уровню логов (опционально)
+      # если собирать только ошибки и предупреждения
+      # - match:
+      #     selector: '{level=~"debug|trace"}'
+      #     action: drop  # Не отправлять debug и trace логи
+
+      # 5. Добавление дополнительных меток из содержимого лога
+      # Например, извлечение userId из сообщения
+      # - regex:
+      #     expression: 'userId[=:]?\s*(\d+)'
+      #     source: message
+      # - labels:
+      #     userId:

@@ -1,3 +1,10 @@
+запускать вседа из папки infra
+docker compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.logging.yml up -d
+
+Остановка
+docker compose -f docker-compose.dev.yml down
+
 красивый вывод таблицы (название, порт, статус)
 docker ps -a --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}"
 

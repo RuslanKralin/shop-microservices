@@ -2,9 +2,10 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { join } from 'path';
+import { Request, Response, NextFunction } from 'express';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { AppModule } from './app.module';
-import { BadRequestException } from './common/exceptions/bad-request.exception';
+// import { BadRequestException } from './common/exceptions/bad-request.exception';
 
 async function bootstrap() {
   const PORT = process.env.PORT || 5001;
@@ -15,7 +16,7 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
 
   if (process.env.NODE_ENV !== 'production') {
-    app.use((req, res, next) => {
+    app.use((req: Request, res: Response, next: NextFunction) => {
       console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
       next();
     });
@@ -23,15 +24,9 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      transform: true,
-      exceptionFactory: (errors) => {
-        const errorMessages = errors.map((error) => ({
-          field: error.property,
-          errors: error.constraints
-            ? Object.values(error.constraints)
-            : ['Ошибка валидации'],
-        }));
-        return new BadRequestException('Ошибка валидации', errorMessages);
+      transform: true, // <‑‑ вот это важно
+      transformOptions: {
+        enableImplicitConversion: true, // чтобы "987" → 987
       },
     }),
   );

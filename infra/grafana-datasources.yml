@@ -1,0 +1,47 @@
+# ============================================
+# АВТОМАТИЧЕСКАЯ НАСТРОЙКА ИСТОЧНИКОВ ДАННЫХ GRAFANA
+# ============================================
+# Этот файл автоматически добавляет Loki как источник данных при старте Grafana
+# Без этого файла пришлось бы настраивать вручную через веб-интерфейс
+
+apiVersion: 1
+
+# Удалять источники данных, которых нет в этом файле
+deleteDatasources:
+  - name: Loki
+    orgId: 1
+
+# Список источников данных
+datasources:
+  # Основной источник данных - Loki
+  - name: Loki
+    type: loki # Тип источника данных
+    access: proxy # Grafana будет проксировать запросы к Loki
+    url: http://loki:3100 # URL Loki внутри Docker сети
+    isDefault: true # Сделать источником по умолчанию
+    editable: true # Можно редактировать через UI
+    orgId: 1 # ID организации (для multi-tenancy)
+    version: 1 # Версия конфигурации
+
+    # Дополнительные настройки JSON
+    jsonData:
+      # Максимальное количество строк в результате запроса
+      maxLines: 1000
+
+      # Настройки для derived fields (извлечение полей из логов)
+      # Это позволяет создавать ссылки на trace ID, например
+      derivedFields:
+        # Пример: извлечение trace ID и создание ссылки на Jaeger
+        # - datasourceUid: jaeger_uid
+        #   matcherRegex: "traceId=(\\w+)"
+        #   name: TraceID
+        #   url: "http://localhost:16686/trace/$${__value.raw}"
+
+        # Пример: извлечение user ID
+        - matcherRegex: "userId=(\\d+)"
+          name: UserID
+          url: "" # Можно добавить ссылку на профиль пользователя
+
+
+      # Настройки алертов (если используете)
+      # alertmanagerUid: alertmanager_uid

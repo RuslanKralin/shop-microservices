@@ -1,0 +1,110 @@
+version: "3.8"
+
+services:
+  # ============================================
+  # LOKI - Хранилище логов
+  # ============================================
+  # Это как база данных для логов, но оптимизированная для поиска по меткам
+  # В отличие от Elasticsearch, Loki не индексирует содержимое логов,
+  # а только метки (labels), что делает его намного легче и быстрее
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: loki
+    ports:
+      - "3100:3100" # HTTP API для приема и запроса логов
+    volumes:
+      # Конфигурация Loki
+      - ./loki-config.yml:/etc/loki/local-config.yaml
+      # Хранилище данных (логи будут сохраняться здесь)
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - logging
+    restart: unless-stopped
+    # Health check - проверяет, что Loki готов принимать логи
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # PROMTAIL - Сборщик логов
+  # ============================================
+  # Promtail автоматически читает логи из всех Docker контейнеров
+  # и отправляет их в Loki с метками (service, container, project)
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      # Доступ к Docker socket - позволяет читать логи всех контейнеров
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Конфигурация Promtail
+      - ./promtail-config.yml:/etc/promtail/config.yml
+      # Временное хранилище позиций чтения логов
+      # (чтобы после перезапуска не читать логи заново)
+      - promtail-positions:/tmp
+    environment:
+      - DOCKER_API_VERSION=1.44
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - logging
+    restart: unless-stopped
+    depends_on:
+      loki:
+        condition: service_healthy # Ждем, пока Loki будет готов
+
+  # ============================================
+  # GRAFANA - Веб-интерфейс для просмотра логов
+  # ============================================
+  # Grafana - это мощный инструмент визуализации
+  # Здесь вы будете искать логи, создавать дашборды и графики
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: grafana
+    ports:
+      - "3001:3000" # Веб-интерфейс будет доступен на http://localhost:3001
+    environment:
+      # Учетные данные администратора
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      # Отключаем регистрацию новых пользователей
+      - GF_USERS_ALLOW_SIGN_UP=false
+      # Включаем анонимный доступ для удобства (только для dev!)
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    volumes:
+      # Хранилище данных Grafana (дашборды, настройки)
+      - grafana-data:/var/lib/grafana
+      # Автоматическая настройка источника данных Loki
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+    networks:
+      - logging
+    restart: unless-stopped
+    depends_on:
+      loki:
+        condition: service_healthy
+
+# ============================================
+# NETWORKS
+# ============================================
+# Отдельная сеть для системы логирования
+# Это изолирует трафик логов от основного приложения
+networks:
+  logging:
+    driver: bridge
+
+# ============================================
+# VOLUMES
+# ============================================
+# Persistent storage для сохранения данных между перезапусками
+volumes:
+  loki-data:
+    # Здесь хранятся все логи
+  grafana-data:
+    # Здесь хранятся дашборды и настройки Grafana
+  promtail-positions:
+    # Здесь Promtail запоминает, до какого места прочитал логи

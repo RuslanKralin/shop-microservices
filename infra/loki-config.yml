@@ -1,0 +1,93 @@
+# ============================================
+# КОНФИГУРАЦИЯ LOKI
+# ============================================
+# Это упрощенная конфигурация для локальной разработки
+# Для production нужна более сложная настройка с S3/GCS хранилищем!!!!!!!!!!!!!!!!!!
+
+# Настройки HTTP сервера
+auth_enabled: false # Отключаем аутентификацию (только для dev!)
+# В production включи аутентификацию и SSL !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# Настройки HTTP API
+server:
+  http_listen_port: 3100 # Порт для приема логов и запросов
+  grpc_listen_port: 9096 # Порт для gRPC (используется для репликации)
+
+# Настройки хранилища метаданных
+# Loki использует это для хранения информации о chunks (кусках логов)
+ingester:
+  # Жизненный цикл ingester
+  lifecycler:
+    address: 127.0.0.1
+    ring:
+      kvstore:
+        store: inmemory # Хранить в памяти (для dev)
+      replication_factor: 1 # Без репликации (для dev)
+    final_sleep: 0s
+
+  # Настройки chunks (кусков логов)
+  chunk_idle_period: 5m # Сохранять chunk после 5 минут без новых логов
+  chunk_retain_period: 30s # Держать chunk в памяти еще 30 секунд
+  max_chunk_age: 1h # Максимальный возраст chunk - 1 час
+  chunk_target_size: 1048576 # Целевой размер chunk - 1MB
+
+  # Настройки WAL (Write-Ahead Log) для надежности
+  wal:
+    enabled: true
+    dir: /loki/wal
+
+# Настройки схемы хранения
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: boltdb-shipper # Используем BoltDB для индексов
+      object_store: filesystem # Храним chunks на файловой системе
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h # Создавать новый индекс каждые 24 часа
+
+# Настройки физического хранилища
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /loki/boltdb-shipper-active # Активные индексы
+    cache_location: /loki/boltdb-shipper-cache # Кэш индексов
+    cache_ttl: 24h # TTL кэша
+    shared_store: filesystem # Используем файловую систему
+
+  filesystem:
+    directory: /loki/chunks # Директория для хранения chunks
+
+# Настройки лимитов
+limits_config:
+  # Лимиты для защиты от перегрузки
+  reject_old_samples: true
+  reject_old_samples_max_age: 336h # Не принимать логи старше 14 дней
+  ingestion_rate_mb: 10 # Максимум 10MB/сек на поток
+  ingestion_burst_size_mb: 20 # Burst до 20MB
+  max_streams_per_user: 10000 # Максимум 10000 потоков на пользователя
+  max_query_length: 721h # Максимальный период запроса - 30 дней
+
+# Настройки компактора (очистка старых данных)
+compactor:
+  working_directory: /loki/boltdb-shipper-compactor
+  shared_store: filesystem
+  compaction_interval: 10m # Запускать компактор каждые 10 минут
+
+# Настройки retention (хранение логов)
+# Логи старше указанного периода будут автоматически удаляться
+chunk_store_config:
+  max_look_back_period: 0s # Отключаем ограничение (для dev)
+
+table_manager:
+  retention_deletes_enabled: true
+  retention_period: 168h # Хранить логи 7 дней (для dev)
+
+# Настройки кэширования запросов
+query_range:
+  # Кэширование результатов запросов для ускорения повторных запросов
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100 # Максимум 100MB для кэша

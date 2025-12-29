@@ -5,7 +5,7 @@ services:
       context: ../services/gateway
       dockerfile: Dockerfile.dev
     ports:
-      - '3000:3000'
+      - "3000:3000"
     volumes:
       - ../services/gateway:/app
       - /app/node_modules
@@ -23,14 +23,14 @@ services:
       - product-app-dev
       - order-app-dev
       - cart-app-dev
-    command: sh -c "npm install && npx cross-env NODE_ENV=docker nest start --watch"
+    command: sh -c "npm install && npm run start:dev"
   app-dev: # Сервис разработки user-service
     container_name: app-dev
     build:
       context: ../services/user-service
       dockerfile: Dockerfile.dev
     ports:
-      - '5000:5000'
+      - "5000:5000"
     volumes:
       - ../services/user-service:/app
       - /app/node_modules
@@ -52,7 +52,7 @@ services:
       - db
       - redis
       - kafka
-    command: sh -c "npm install && npx cross-env NODE_ENV=docker nest start --watch" # Команда для запуска приложения в режиме разработки
+    command: sh -c "npm install && npm run start:dev" # Команда для запуска приложения в режиме разработки
 
   product-app-dev: # Сервис разработки product-service
     container_name: product-app-dev
@@ -60,8 +60,8 @@ services:
       context: ../services/product-service
       dockerfile: Dockerfile.dev
     ports:
-      - '5001:5001'
-      - '50051:50051' # gRPC порт
+      - "5001:5001"
+      - "50051:50051" # gRPC порт
     volumes:
       - ../services/product-service:/app
       - /app/node_modules
@@ -76,7 +76,7 @@ services:
       - product-db
       - redis
       - kafka
-    command: sh -c "npm install && npx cross-env NODE_ENV=docker nest start --watch"
+    command: sh -c "npm install && npm run start:dev"
 
   order-app-dev: # Сервис разработки order-service
     container_name: order-app-dev
@@ -84,7 +84,7 @@ services:
       context: ../services/order-service
       dockerfile: Dockerfile.dev
     ports:
-      - '5002:5002'
+      - "5002:5002"
     volumes:
       - ../services/order-service:/app
       - /app/node_modules
@@ -99,7 +99,7 @@ services:
       - order-db
       - redis
       - kafka
-    command: sh -c "npm install && npx cross-env NODE_ENV=docker nest start --watch"
+    command: sh -c "npm install && npm run start:dev"
 
   cart-app-dev: # Сервис разработки order-service
     container_name: cart-app-dev
@@ -107,7 +107,7 @@ services:
       context: ../services/cart-service
       dockerfile: Dockerfile.dev
     ports:
-      - '5003:5003'
+      - "5003:5003"
     volumes:
       - ../services/cart-service:/app
       - /app/node_modules
@@ -128,7 +128,7 @@ services:
       - redis
       - kafka
       - product-app-dev # Важно: зависимость от Product Service
-    command: sh -c "npm install && npx cross-env NODE_ENV=docker nest start --watch"
+    command: sh -c "npm install && npm run start:dev"
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.1
@@ -136,7 +136,7 @@ services:
       - ZOOKEEPER_CLIENT_PORT=2181
       - ZOOKEEPER_TICK_TIME=2000
     ports:
-      - '2181:2181'
+      - "2181:2181"
     restart: always
 
   kafka:
@@ -146,8 +146,8 @@ services:
     ports:
       # 9092 - для контейнеров внутри docker network (kafka:9092)
       # 9094 - для приложений, запущенных на хост-машине (localhost:9094)
-      - '9092:9092'
-      - '9094:9094'
+      - "9092:9092"
+      - "9094:9094"
     environment:
       - KAFKA_BROKER_ID=1
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
@@ -166,7 +166,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - '6380:6379'
+      - "6380:6379"
     volumes:
       - redis-data:/data
     restart: always
@@ -174,7 +174,7 @@ services:
   redis-insight: # не работает через браузер
     image: redis/redisinsight:latest
     ports:
-      - '8002:8001'
+      - "8002:8001"
     volumes:
       - redis-insight-data:/db
     restart: always
@@ -185,7 +185,7 @@ services:
     container_name: db_user
     image: postgres:14-alpine # Используем образ Postgres
     ports:
-      - '5433:5432' # Порт для доступа к базе данных
+      - "5433:5432" # Порт для доступа к базе данных
     environment: # Переменные окружения
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -198,7 +198,7 @@ services:
     container_name: db_product
     image: postgres:14-alpine
     ports:
-      - '5434:5432' # Порт для доступа к базе данных
+      - "5434:5432" # Порт для доступа к базе данных
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -211,7 +211,7 @@ services:
     container_name: db_order
     image: postgres:14-alpine
     ports:
-      - '5435:5432' # Порт для доступа к базе данных
+      - "5435:5432" # Порт для доступа к базе данных
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -223,7 +223,7 @@ services:
     container_name: db_cart
     image: postgres:14-alpine
     ports:
-      - '5436:5432' # Порт для доступа к базе данных
+      - "5436:5432" # Порт для доступа к базе данных
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -235,7 +235,7 @@ services:
   pgadmin: # Сервис pgadmin
     image: dpage/pgadmin4
     ports:
-      - '5050:80'
+      - "5050:80"
     environment: # Переменные окружения
       - PGADMIN_DEFAULT_EMAIL=admin@admin.com
       - PGADMIN_DEFAULT_PASSWORD=admin
