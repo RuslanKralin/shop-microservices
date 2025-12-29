@@ -3,6 +3,7 @@ import { HttpModule } from '@nestjs/axios';
 import { ProxyController } from './proxy.controller';
 import { ProxyService } from './proxy.service';
 import { AuthModule } from '../auth/auth.module';
+import { PinoLoggerService } from 'src/common/logger/logger.service';
 
 //Модуль который связывает контроллер и сервис. Импортирует HttpModule для HTTP запросов и AuthModule для проверки токенов.
 @Module({
@@ -14,6 +15,6 @@ import { AuthModule } from '../auth/auth.module';
     AuthModule,
   ],
   controllers: [ProxyController],
-  providers: [ProxyService],
+  providers: [ProxyService, PinoLoggerService],
 })
 export class ProxyModule {}
